@@ -15,7 +15,7 @@ st.write(
 )
 
 
-# Tunatengeneza na kufundisha model hapo hapo (Model ya haraka ya kutumia data za kawaida za digits)
+# Tunatengeneza na kufundisha model hapo hapo
 @st.cache_resource
 def train_model():
   digits = load_digits()
@@ -48,44 +48,34 @@ if st.button("Tabiri Namba (Predict)"):
   if canvas_result.image_data is not None:
     img_data = canvas_result.image_data
 
-    # Angalia kama mtumiaji amechora kweli
+    # Angalia kama mtumiaji amechora kweli (kama hajakacha tupu)
     if np.sum(img_data) == 0:
       st.warning(
           "⚠️ Tafadhali chora namba kwanza kabla ya kubonyeza kitufe cha"
           " kutabiri!"
       )
     else:
-      # Badilisha picha kuwa grayscale na ubadili ukubwa uwe 8x8 pixels (inayolingana na dataset ya digits)
+      # Badilisha picha kuwa grayscale na ubadili ukubwa uwe 8x8 pixels
       gray = cv2.cvtColor(img_data.astype("uint8"), cv2.COLOR_RGBA2GRAY)
       resized = cv2.resize(gray, (8, 8), interpolation=cv2.INTER_AREA)
 
-      # Geuza iwe rangi ya kawaida ya digits (0 hadi 16)
+      # Geuza iwe rangi inayolingana na model ya digits
       flattened = resized.flatten()
-      scaled_image = np.array(
-          [16 - (flattened / 255.0) * 16]
-      )  # Inageuza rangi kuwa nyeusi/nyeupe sawa na model
+      scaled_image = np.array([16 - (flattened / 255.0) * 16])
 
       # Pata utabiri na asilimia zake
       probabilities = model.predict_proba(scaled_image)
       predicted_digit = np.argmax(probabilities)
       confidence = np.max(probabilities) * 100
 
-      # Weka kikomo cha asilimia (Threshold) cha kugoma vitu visivyo sahihi (mfano chini ya 40%)
-      kikomo_cha_asilimia = 40.0
+      # Onyesha moja kwa bila kugoma yoyote
+      st.success(
+          f"🎉 Namba sahihi ni: **{predicted_digit}** (kwa asilimia"
+          f" {confidence:.1f}%)"
+      )
 
-      if confidence < kikomo_cha_asilimia:
-        st.error(
-            "❌ Hii haionekani kuwa namba sahihi au haieleweki! Tafadhali chora"
-            " vizuri zaidi."
-        )
-      else:
-        st.success(
-            f"🎉 Namba sahihi ni: **{predicted_digit}** (kwa asilimia"
-            f" {confidence:.1f}%)"
-        )
-
-        # Onyesha asilimia zote za namba 0 hadi 9
-        st.write("### Uchambuzi wa Asilimia za Kila Namba:")
-        for i, prob in enumerate(probabilities[0]):
-          st.progress(float(prob))
-          st.write(f"Namba **{i}**: {prob * 100:.1f}%")
+      # Onyesha uchambuzi wa asilimia zote za namba 0 hadi 9
+      st.write("### Uchambuzi wa Asilimia za Kila Namba:")
+      for i, prob in enumerate(probabilities[0]):
+        st.progress(float(prob))
+        st.write(f"Namba **{i}**: {prob * 100:.1f}%")
