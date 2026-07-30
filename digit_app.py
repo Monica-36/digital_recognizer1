@@ -1,13 +1,33 @@
 import cv2
 import numpy as np
 import streamlit as st
+from sklearn.datasets import load_digits
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
 from streamlit_drawable_canvas import st_canvas
 
-st.title("Handwritten Digit Recognizer AI")
+st.title("Handwritten Digit Recognizer AI (Pro)")
 st.write(
-    "Chora namba yako kwa umakini katikati ya kisanduku kisha ubofye Tabiri"
-    " Namba!"
+    "Chora namba yoyote (0 hadi 9) kwa umakini katikati ya kisanduku kisha ubofye"
+    " Tabiri Namba!"
 )
+
+
+# Tunatumia KNN Classifier ambayo ni mahiri sana kwa kutambua namba za mikono kupitia picha
+@st.cache_resource
+def train_pro_model():
+  digits = load_digits()
+  X, y = digits.data, digits.target
+  X_train, X_test, y_train, y_test = train_test_split(
+      X, y, test_size=0.2, random_state=42
+  )
+  # Tunatumia n=3 kupata uwiano mzuri wa karibu wa maumbo
+  model = KNeighborsClassifier(n_neighbors=3)
+  model.fit(X_train, y_train)
+  return model
+
+
+model = train_pro_model()
 
 # Eneo la kuchoria
 canvas_result = st_canvas(
@@ -31,7 +51,7 @@ if st.button("Tabiri Namba (Predict)"):
       # Badilisha picha kuwa Grayscale
       gray = cv2.cvtColor(img_data.astype("uint8"), cv2.COLOR_RGBA2GRAY)
 
-      # Tafuta mipaka ya namba iliyochorwa
+      # Tunafanya Cropping ya eneo lililochorwa pekee kuondoa nafasi tupu za pembeni
       contours, _ = cv2.findContours(
           gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
       )
@@ -43,49 +63,30 @@ if st.button("Tabiri Namba (Predict)"):
         if w > 5 and h > 5:
           roi = gray[y : y + h, x : x + w]
 
-          # Tunapima sifa halisi za kimaumbo (Topology & Geometry)
-          total_pixels = cv2.countNonZero(roi)
-          aspect_ratio = float(w) / h
+          # Ibadili iwe saizi ya 8x8 pixels inayofaa na Model
+          resized = cv2.resize(roi, (8, 8), interpolation=cv2.INTER_AREA)
 
-          # Tunatumia mlinganyo sahihi wa kijiometri kutambua namba halisi uliyochora
-          # Hii inaondoa kabisa tabia ya mfumo kukosea na kuleta namba 9 bila sababu
-          if aspect_ratio < 0.45 and h > w * 1.5:
-            detected_digit = 1
-            confidence = 94.2
-          elif total_pixels < 180:
-            detected_digit = 7
-            confidence = 91.0
-          else:
-            # Tunachambua uwiano wa eneo la kati (Center of Mass)
-            M = cv2.moments(roi)
-            if M["m00"] > 0:
-              cX = int(M["m10"] / M["m00"])
-              # Kuangalia kama mchoro umeelemea upande fulani au una duara
-              if w > h * 1.2:
-                detected_digit = 0
-              elif cX < w / 2:
-                detected_digit = 2
-              else:
-                detected_digit = 3
-            else:
-              detected_digit = 5
-            confidence = 88.5
+          # Sahihisha viwango vya rangi kuendana na dataset (0 hadi 16)
+          flattened = resized.flatten()
+          scaled_image = np.array([16 - (flattened / 255.0) * 16])
+
+          # Pata matokeo na asilimia za uhakika
+          probabilities = model.predict_proba(scaled_image)
+          predicted_digit = np.argmax(probabilities)
+          confidence = np.max(probabilities) * 100
 
           st.success(
-              f"🎉 Namba sahihi uliyochora ni: **{detected_digit}** (kwa"
+              f"🎉 Namba sahihi uliyochora ni: **{predicted_digit}** (kwa"
               f" uhakika wa {confidence:.1f}%)"
           )
 
           st.write("### Uchambuzi wa Asilimia za Kila Namba:")
-          for i in range(10):
-            prob = (
-                confidence / 100.0
-                if i == detected_digit
-                else (1.0 - (confidence / 100.0)) / 9.0
-            )
+          for i, prob in enumerate(probabilities[0]):
             st.progress(float(prob))
             st.write(f"Namba **{i}**: {prob * 100:.1f}%")
         else:
-          st.error("Mchoro ni mdogo sana. Tafadhali chora kwa uwazi.")
+          st.error(
+              "Mchoro ni mdogo sana, tafadhali chora kwa uwazi zaidi katikati."
+          )
       else:
         st.error("Hatujaona mchoro wowote kwenye kisanduku.")
