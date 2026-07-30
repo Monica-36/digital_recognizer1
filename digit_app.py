@@ -1,40 +1,71 @@
-import streamlit as st
 import numpy as np
-from sklearn.datasets import fetch_openml
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
+import streamlit as st
+from streamlit_drawable_canvas import st_canvas
 
-st.title("Handwritten Digit Recognition App")
-st.write("Hii ni app inayotambua namba zilizoandikwa kwa mkono kwa kutumia Machine Learning.")
+# Weka kichwa cha App
+st.title("Handwritten Digit Recognizer AI")
+st.write(
+    "Chora namba yoyote (0 hadi 9) kwenye kisanduku hapa chini. AI itaichunguza"
+    " na kuonyesha asilimia zake!"
+)
 
-@st.cache_resource
-def load_and_train_model():
-    mnist = fetch_openml('mnist_784', version=1, as_frame=False)
-    X, y = mnist.data, mnist.target.astype(int)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    model = RandomForestClassifier(n_estimators=50, random_state=42)
-    model.fit(X_train, y_train)
-    return model, X_test, y_test
+# 1. Eneo la kuchoria (Canvas)
+st.subheader("Chora namba yako hapa:")
+canvas_result = st_canvas(
+    fill_color="black",
+    stroke_width=18,
+    stroke_color="white",
+    background_color="black",
+    height=150,
+    width=150,
+    drawing_mode="freedraw",
+    key="canvas",
+)
 
-with st.spinner("Inapakua na kuandaa Model... Tafadhali subiri kidogo."):
-    model, X_test, y_test = load_and_train_model()
+# 2. Kitufe cha kutabiri
+if st.button("Tabiri Namba (Predict)"):
+  if canvas_result.image_data is not None:
+    # Hapa tunachukua picha iliyochorwa na kuifanyia mabadiliko
+    img_data = canvas_result.image_data
 
-st.success("Model iko tayari!")
+    # Angalia kama mtumiaji amechora kweli (kama hajakacha tupu)
+    if np.sum(img_data) == 0:
+      st.warning(
+          "⚠️ Tafadhali chora namba kwanza kabla ya kubonyeza kitufe cha"
+          " kutabiri!"
+      )
+    else:
+      # Hapa utaunganisha na model yako halisi ya Machine Learning (Mfano Scikit-Learn au mlinganisho wako)
+      # Mfano wa kuiga mantiki ya probabilities (Ikiwa model yako imeshapakiwa):
+      # probabilities = model.predict_proba(processed_image)
 
-# Kitufe cha kuchagua picha ya mfano
-index = st.slider("Chagua namba ya picha kwenye mfumo (Test Index):", 0, len(X_test)-1, 0)
+      # --- SEHEMU YA MANTIKI (LOGIC) YA KUTABIRI ---
+      # Kwa mfano wa majaribio, hapa tunaweka mfano wa matokeo:
+      # (Badilisha sehemu hii kuunganisha na model yako halisi ya ML uliyoweka)
 
-sample_image = X_test[index]
-actual_label = y_test[index] if not hasattr(y_test, 'iloc') else y_test.iloc[index]
-predicted_label = model.predict([sample_image])[0]
+      # Tunafanya simulation ya kupata namba na asilimia kubwa zaidi
+      # Mfano tukipata matokeo ya probabilities kutoka kwenye model yako:
+      # predicted_digit = np.argmax(probabilities)
+      # confidence = np.max(probabilities) * 100
 
-# Onyesha picha kwenye Streamlit
-fig, ax = plt.subplots()
-ax.imshow(sample_image.reshape(28, 28), cmap='gray')
-ax.axis('off')
+      # Mfano wa kuweka Kikomo (Threshold) cha kugoma vitu visivyo sahihi:
+      kikomo_cha_asilimia = 50.0  # Chini ya 50% inagoma
 
-st.pyplot(fig)
-st.write(f"### Namba halisi (Actual): **{actual_label}**")
-st.write(f"### AI imetabiri (Predicted): **{predicted_label}**")
+      # Tuseme tumepata matokeo (Unaweza kubadilisha hapa ukishaiunganisha na model yako)
+      # Hapa chini ni mfano tu wa jinsi ya kuandika hiyo code:
+
+      # if confidence < kikomo_cha_asilimia:
+      #     st.error("❌ Hii haionekani kuwa namba sahihi! Tafadhali chora vizuri zaidi.")
+      # else:
+      #     st.success(f"🎉 Namba sahihi ni: **{predicted_digit}** (kwa asilimia {confidence:.1f}%)")
+      #
+      #     # Kuonyesha asilimia zote za namba 0 hadi 9
+      #     st.write("### Uchambuzi wa Asilimia za Kila Namba:")
+      #     for i, prob in enumerate(probabilities[0]):
+      #         st.progress(float(prob))
+      #         st.write(f"Namba **{i}**: {prob * 100:.1f}%")
+
+      st.info(
+          "Ubunifu wa kuchora umepokelewa! Unganisha tu na model yako ya"
+          " predict_proba hapa ili kutoa matokeo halisi."
+      )
