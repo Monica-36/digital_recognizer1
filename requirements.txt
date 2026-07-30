@@ -1,5 +1,7 @@
 streamlit
+scikit-learn
 numpy
-tensorflow
+matplotlib
+pandas
 streamlit-drawable-canvas
 opencv-python-headless
