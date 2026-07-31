@@ -1,7 +1,0 @@
-streamlit
-scikit-learn
-numpy
-matplotlib
-pandas
-streamlit-drawable-canvas
-opencv-python-headless
